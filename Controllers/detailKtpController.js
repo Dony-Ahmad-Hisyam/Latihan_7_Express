@@ -28,7 +28,7 @@ const addDetail_ktpController = async (req, res) => {
       queryDB("SELECT no_kk FROM kartu_keluarga WHERE no_kk = ?", [no_kk]),
     ]);
 
-    const ayah_nik = ayahResult[0]?.nik; // Menggunakan nullish coalescing operator (?.) untuk mengatasi jika data tidak ditemukan
+    const ayah_nik = ayahResult[0]?.nik;
     const ibu_nik = ibuResult[0]?.nik;
     const kk_no_kk = kkResult[0]?.no_kk;
 
@@ -79,46 +79,84 @@ function queryDB(query, values) {
   });
 }
 
-const getAllDetail_ktpController = (req, res) => {
-  connection.query("SELECT * FROM detail_ktp", (err, rows) => {
-    if (err) {
-      return res.status(500).json({
+const getAllDetail_ktpController = async (req, res) => {
+  try {
+    const query = `
+    SELECT
+    dk.id_detail,
+    dk.no_kk,
+    ktp_diri.nama_lengkap AS nik,
+    dk.status_hubungan_dalam_keluarga,
+    ktp_ayah.nama_lengkap AS ayah,
+    ktp_ibu.nama_lengkap AS ibu
+FROM
+    detail_ktp AS dk
+LEFT JOIN
+    ktp AS ktp_ayah ON dk.ayah = ktp_ayah.nik
+LEFT JOIN
+    ktp AS ktp_ibu ON dk.ibu = ktp_ibu.nik
+LEFT JOIN
+    ktp AS ktp_diri ON dk.nik = ktp_diri.nik;
+    `;
+
+    const rows = await queryDB(query);
+
+    return res.status(200).json({
+      status: true,
+      message: "Sukses..!",
+      data: rows,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: false,
+      message: "Kesalahan dalam server: " + error.message,
+    });
+  }
+};
+const getByIdDetail_ktpController = async (req, res) => {
+  const id_detail = req.params.id_detail;
+
+  try {
+    const query = `
+      SELECT
+        dk.id_detail,
+        dk.no_kk,
+        ktp_diri.nama_lengkap AS nik,
+        dk.status_hubungan_dalam_keluarga,
+        ktp_ayah.nama_lengkap AS ayah,
+        ktp_ibu.nama_lengkap AS ibu
+      FROM
+        detail_ktp AS dk
+      LEFT JOIN
+        ktp AS ktp_ayah ON dk.ayah = ktp_ayah.nik
+      LEFT JOIN
+        ktp AS ktp_ibu ON dk.ibu = ktp_ibu.nik
+      LEFT JOIN
+        ktp AS ktp_diri ON dk.nik = ktp_diri.nik
+      WHERE
+        dk.id_detail = ?;
+    `;
+
+    const rows = await queryDB(query, [id_detail]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({
         status: false,
-        message: "Kesalahan dalam server: " + err.message,
+        message: "Data not found",
       });
     } else {
       return res.status(200).json({
         status: true,
         message: "Sukses..!",
-        data: rows,
+        data: rows[0],
       });
     }
-  });
-};
-
-const getByIdDetail_ktpController = (req, res) => {
-  const id_detail = req.params.id_detail;
-  connection.query("SELECT * FROM detail_ktp WHERE id_detail = ?", [id_detail], (err, rows) => {
-    if (err) {
-      return res.status(500).json({
-        status: false,
-        message: "Kesalahan dalam server: " + err.message,
-      });
-    } else {
-      if (rows.length === 0) {
-        return res.status(404).json({
-          status: false,
-          message: "Data not found",
-        });
-      } else {
-        return res.status(200).json({
-          status: true,
-          message: "Sukses..!",
-          data: rows[0],
-        });
-      }
-    }
-  });
+  } catch (error) {
+    return res.status(500).json({
+      status: false,
+      message: "Kesalahan dalam server: " + error.message,
+    });
+  }
 };
 
 const editDetail_ktpController = (req, res) => {

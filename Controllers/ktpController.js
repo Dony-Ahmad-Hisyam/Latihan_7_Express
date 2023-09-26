@@ -5,7 +5,7 @@ const getAllKtpController = (req, res) => {
   connection.query("SELECT * FROM ktp", (err, rows) => {
     if (err) {
       return res.status(500).json({
-        status: false,
+        status: false,  
         message: "Server Error",
       });
     } else {
